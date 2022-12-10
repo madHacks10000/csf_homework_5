@@ -97,7 +97,7 @@ bool Connection::send(std::string msg) {
   msg += "\n";
   char const* formatted_send = msg.c_str();
   ssize_t size = rio_writen(this->m_fd, formatted_send, strlen(formatted_send)); //new correct way
-  if (size!=strlen(formatted_send)) {
+  if (size!= (ssize_t) strlen(formatted_send)) {
     m_last_result = EOF_OR_ERROR;
     std::cerr << "Bad send" << std::endl;
     return false;
@@ -111,14 +111,11 @@ bool Connection::send(std::string msg) {
  * Parameters: message (msg)
  */
 bool Connection::receive(char* msg) {
-  // std::cout << "In receive function" << std::endl;
   if ((rio_readlineb(this->m_fdbuf, msg, 225)) < 0) {
     std::cerr << "Rio_readlineb error" <<std::endl;
     m_last_result = EOF_OR_ERROR;
     return false;
   }
-  // std::cout << "Raw Message in receive: " << msg << std::endl;
-  // std::cout << "Separating message" << std::endl;
   // Divide up the received message into parts for evaluation
   //strip message of extra chars
   std::string formatted_reply(msg); 
@@ -137,7 +134,6 @@ bool Connection::receive(char* msg) {
     return false;
   }
   m_last_result = SUCCESS;
-  // std::cout << "End of receive function" << std::endl;
   return true;
 }
 
