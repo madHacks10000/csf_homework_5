@@ -275,6 +275,7 @@ void Server::chat_with_sender(User *user, int client_fd, Connection* conn) {
 
   bool Server::quit(User *user, Room *cur_room) { //add any other needed close down code to this
     leave(user,cur_room);
+    delete user;
     return true;
   }
 
@@ -294,6 +295,8 @@ void Server::chat_with_receiver(User *user, int client_fd, Connection* conn) {
     conn->send("ok:good join");
   } else {
     conn->send("err:bad join tag");
+    conn->close();
+    delete user;
     return;
   } 
   while (convo_valid) {
@@ -304,8 +307,9 @@ void Server::chat_with_receiver(User *user, int client_fd, Connection* conn) {
       convo_valid = conn->send(message_as_string.c_str());
     }
   }
-  conn->close();
+
   this->quit(user,cur_room);
+  conn->close();
   return;
 }
 
