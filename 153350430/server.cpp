@@ -96,7 +96,7 @@ void *worker(void *arg) {
     delete user;
   } else {
     //error with bad tag case
-    conn->send("err:bad_login");//message ok because we got a good login
+    conn->send("err:bad_login");
     std::cerr << "BAD FIRST TAG: " << tag << std::endl;
     conn->close();
     delete conn;
@@ -108,7 +108,6 @@ void *worker(void *arg) {
   delete info;
   return NULL;
 }
-
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -139,12 +138,15 @@ Server::~Server() {
 Listen function inits and open listen fd to for the server.
 */
 bool Server::listen() {
-  //  use open_listenfd to create the server socket, return true
-  //       if successful, false if not
-  std::string temp_port = std::to_string(this->m_port); // Convert number to a string
-  char const* port = temp_port.c_str(); // Convert string to char Array
+  //Use open_listenfd to create the server socket, return true
+  //If successful, false if not
+  // Convert number to a string
+  std::string temp_port = std::to_string(this->m_port); 
+  // Convert string to char Array
+  char const* port = temp_port.c_str();
+  //Open socket connection and verify correctness 
   this->m_ssock = open_listenfd(port);
-  if (m_ssock < 0) { // param: const char* port
+  if (m_ssock < 0) {
     return false;
   }
   return true;
@@ -155,9 +157,9 @@ bool Server::listen() {
 Function to manage all client requests, calls accept in a loop. Creates new threads.
 */
 void Server::handle_client_requests() {
-  //      infinite loop calling accept or Accept, starting a new
-  //       pthread for each connected client
-  // how to deal w serverfd
+  //Infinite loop calling accept or Accept, starting a new
+  //Pthread for each connected client
+  //How to deal w serverfd
   while(1) { // should we instead check when max number of connections is reached?
     int clientfd = Accept(m_ssock, NULL, NULL);
     if (clientfd < 0) {
@@ -184,25 +186,31 @@ void Server::handle_client_requests() {
 
 
 /*
-helper function to either find a room object or create a new one if need be.
+Helper function to either find a room object or create a new one if need be.
 */
 Room *Server::find_or_create_room(const std::string &room_name) {
-  //      return a pointer to the unique Room object representing
-  //       the named chat room, creating a new one if necessary
-  if (m_rooms.count(room_name)>0) { //checks to see if a room exits in the map
-    return m_rooms[room_name]; //if it does we return the room
+  //return a pointer to the unique Room object representing
+  //the named chat room, creating a new one if necessary
+  //checks to see if a room exits in the map
+  if (m_rooms.count(room_name)>0) {
+    //If it does we return the room
+    return m_rooms[room_name]; 
   } else { //if it doesnt
     Room* new_room = new Room(room_name);
+    //locks the rooom map
     Guard g(m_lock);
-    m_rooms[room_name] = new_room; //create a new room by constructor w/ roomname
-    return new_room; //return the new room
+    //create a new room by constructor w/ roomname
+    m_rooms[room_name] = new_room; 
+    return new_room;
   }
 }
 
 
 
 
-
+/*
+Function to manage chat with sender. Loops the convo until the sender quits.
+*/
 void Server::chat_with_sender(User *user, int client_fd, Connection* conn) {
   // see sequence diagrams in part 1 for how to implement
   // terminate the loop and tear down the client thread if any message fails to send
@@ -255,7 +263,7 @@ void Server::chat_with_sender(User *user, int client_fd, Connection* conn) {
       } else {
         conn->send("err:quit failed");
       }
-    } else {
+    } else { //Error case for bad tag input
       std::cerr<<"BAD TAG"<<std::endl;
       this->quit(user,cur_room); 
       conn->send("err:ur bad my guy");
@@ -272,32 +280,36 @@ void Server::chat_with_sender(User *user, int client_fd, Connection* conn) {
     return target_room;
   }
 
-  bool Server::sendall(User *user, Room *cur_room,std::string message) {
-    //  std::cout << "in send" <<std::endl;
-    if ((cur_room == nullptr) || (m_rooms.count(cur_room->get_room_name()) <= 0)) { //checks to see if a room exits in the map
-      return false; //if it does we return the room
-    } else {
-      cur_room->broadcast_message(user->username,message);
-      return true;
-    }
-  }
-
-
-  bool Server::leave(User *user, Room *cur_room) {
-    if ((cur_room == nullptr) || (m_rooms.count(cur_room->get_room_name()) <= 0)) { //checks to see if a room exits in the map
-      return false; //if it does we return the room
-    } else {
-      cur_room->remove_member(user);
-      return true;
-    }
-  }
-
-  bool Server::quit(User *user, Room *cur_room) { //add any other needed close down code to this
-    leave(user,cur_room);
-    delete user;
+bool Server::sendall(User *user, Room *cur_room,std::string message) {
+  //  std::cout << "in send" <<std::endl;
+  if ((cur_room == nullptr) || (m_rooms.count(cur_room->get_room_name()) <= 0)) { //checks to see if a room exits in the map
+    return false; //if it does we return the room
+  } else {
+    cur_room->broadcast_message(user->username,message);
     return true;
   }
+}
 
+
+bool Server::leave(User *user, Room *cur_room) {
+  if ((cur_room == nullptr) || (m_rooms.count(cur_room->get_room_name()) <= 0)) { //checks to see if a room exits in the map
+    return false; //if it does we return the room
+  } else {
+    cur_room->remove_member(user);
+    return true;
+  }
+}
+
+
+bool Server::quit(User *user, Room *cur_room) {
+  leave(user,cur_room);
+  delete user;
+  return true;
+}
+
+/*
+Function to manage chatting with a receiver.
+*/
 void Server::chat_with_receiver(User *user, int client_fd, Connection* conn) {
   // terminate the loop and tear down the client thread if any message transmission fails, or if a valid quit message is received
   bool convo_valid = true;
@@ -314,8 +326,8 @@ void Server::chat_with_receiver(User *user, int client_fd, Connection* conn) {
     conn->send("ok:good join");
   } else {
     conn->send("err:bad join tag");
-    //conn->close();
-    //delete user;
+    conn->close();
+    this->quit(user,cur_room);
     return;
   } 
   while (convo_valid) {
@@ -328,7 +340,6 @@ void Server::chat_with_receiver(User *user, int client_fd, Connection* conn) {
   }
   conn->close();
   this->quit(user,cur_room);
-  //conn->close();
   return;
 }
 
