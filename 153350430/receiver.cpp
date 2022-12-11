@@ -1,5 +1,5 @@
 /*
- * File for implementation of the receiver client
+ * File for implementation of the receiver client.
  * CSF Assignment 5
  * Madeline Estey (mestey1@jhu.edu)
  * Owen Reed (oreed2@jhu.edu)
@@ -73,7 +73,6 @@ int main(int argc, char **argv) {
       std::string sender;
       std::string message;
       
-      
       size_t pos = 0;
       std::string token;
       int i = 0;
@@ -90,7 +89,8 @@ int main(int argc, char **argv) {
               sender = token;
               i++;
           }
-          formatted_message.erase(0, pos + delimiter.length()); // Erase as we go b/c data is safe in a separate variable
+          // Erase as we go b/c data is safe in a separate variable
+          formatted_message.erase(0, pos + delimiter.length()); 
       }
       if (i!=3 && i!=0) {
         std::cerr << "invlaid format message returned" << std::endl;
@@ -98,7 +98,8 @@ int main(int argc, char **argv) {
         return -1;
       }
       message = formatted_message;
-      std::cout << sender << ": " << message << std::endl; // Print message to receiver console according to protocol
+      // Print message to receiver console according to protocol
+      std::cout << sender << ": " << message << std::endl; 
     } 
   }
   conn.close();
