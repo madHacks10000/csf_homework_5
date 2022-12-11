@@ -55,12 +55,12 @@ void *worker(void *arg) {
   struct ConnInfo *info = (ConnInfo*) arg;
   //        read login message (should be tagged either with
   //       TAG_SLOGIN or TAG_RLOGIN), send response
-  Connection* conn = new Connection((info->clientfd));
+  Connection conn((info->clientfd));
   char message[550] = "FAILED:To Send";
-  bool receive_result = conn->receive(message);
+  bool receive_result = conn.receive(message);
   if (receive_result == false) { //handle error for send
     std::cerr << "Error receiving message from client" << std::endl;
-    conn->close();
+    conn.close();
     delete info;
     return NULL;
   }
@@ -74,37 +74,34 @@ void *worker(void *arg) {
   //       separate helper functions for each of these possibilities
   //       is a good idea)
   if(tag == "rlogin") { //parse login message tag for recv
-    if (!conn->send("ok:hello")) {//message ok because we got a good login
+    if (!conn.send("ok:hello")) {//message ok because we got a good login
       std::cerr << "Error sending message to client recv" << std::endl;
-      conn->close();
+      conn.close();
       delete info;
       return NULL;
     }
     User *user = new User(username,false); //init user as recv
-    info->server->chat_with_receiver(user,info->clientfd,conn); //move into recv loop
+    info->server->chat_with_receiver(user,info->clientfd,&conn); //move into recv loop
     delete user;
   } else if(tag == "slogin") { //parse login message tag for sender
-    if (!conn->send("ok:hello")) {//message ok because we got a good login
+    if (!conn.send("ok:hello")) {//message ok because we got a good login
       std::cerr << "Error sending message to client sender" << std::endl;
-      conn->close();
-      delete conn;
+      conn.close();
       delete info;
       return NULL;
     }
     User *user = new User(username,true); //init user as sender
-    info->server->chat_with_sender(user,info->clientfd,conn); //move into sender loop
+    info->server->chat_with_sender(user,info->clientfd,&conn); //move into sender loop
     delete user;
   } else {
     //error with bad tag case
-    conn->send("err:bad_login");
+    conn.send("err:bad_login");
     std::cerr << "BAD FIRST TAG: " << tag << std::endl;
-    conn->close();
-    delete conn;
+    conn.close();
     delete info;
     return NULL;
   }
-  conn->close();
-  delete conn;
+  conn.close();
   delete info;
   return NULL;
 }
