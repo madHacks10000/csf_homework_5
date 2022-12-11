@@ -95,14 +95,14 @@ void Connection::close() {
  */
 bool Connection::send(std::string msg) {
   msg += "\n";
-  char const* formatted_send = msg.c_str();
-  ssize_t size = rio_writen(this->m_fd, formatted_send, strlen(formatted_send)); //new correct way
+  char const* formatted_send = msg.c_str(); //format the message as char array
+  ssize_t size = rio_writen(this->m_fd, formatted_send, strlen(formatted_send)); //new correct way to write
   if (size!= (ssize_t) strlen(formatted_send)) {
-    m_last_result = EOF_OR_ERROR;
+    m_last_result = EOF_OR_ERROR; //log bad error
     std::cerr << "Bad send" << std::endl;
-    return false;
+    return false; 
   }
-  m_last_result = SUCCESS;
+  m_last_result = SUCCESS; //log good send
   return true;
 }
 
@@ -123,12 +123,12 @@ bool Connection::receive(char* msg) {
   std::string delimiter = ":";
   std::string tag = formatted_reply.substr(0, formatted_reply.find(delimiter)); 
   // Listen for okay (or err) message from server 
-  if(tag == "err") {
+  if(tag == "err") { //error to send
     std::cerr << (formatted_reply.substr(formatted_reply.find(":") + 1).c_str());
     m_last_result = EOF_OR_ERROR;
     return false;
   }
-  if(tag == formatted_reply) {
+  if(tag == formatted_reply) { //error to get a seperate tag/payload
     std::cerr << (formatted_reply.substr(formatted_reply.find(":") + 1).c_str());
     m_last_result = INVALID_MSG;
     return false;
@@ -137,6 +137,11 @@ bool Connection::receive(char* msg) {
   return true;
 }
 
+
+
+/*
+Helper function to strip text from a string.
+*/
 std::string Connection::strip_text(std::string input) {
   size_t pos = (input).find("\n");
   if (pos != std::string::npos) {

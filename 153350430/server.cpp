@@ -1,5 +1,5 @@
 /*
- * File for implementation of the receiver client
+ * File for implementation of the server
  * CSF Assignment 5
  * Madeline Estey (mestey1@jhu.edu)
  * Owen Reed (oreed2@jhu.edu)
@@ -40,34 +40,31 @@ struct ConnInfo {
 namespace {
 
 
-
+/*
+Worker function for doing threads, will call ether chat with sender or recv. inits a connection.
+*/
 void *worker(void *arg) {
-   // TODO: use a static cast to convert arg from a void* to
+  //      use a static cast to convert arg from a void* to
   //       whatever pointer type describes the object(s) needed
   //       to communicate with a client (sender or receiver)
   int detach_result = pthread_detach(pthread_self());
   if (detach_result != 0) {
     std::cerr << "Error detaching thread: " << detach_result << std::endl;
-    // Handle error here
+    // Handle error here for failed detach
   }
-  // std::cout << "In worker function" << std::endl;
   struct ConnInfo *info = (ConnInfo*) arg;
-  // TODO: read login message (should be tagged either with
+  //        read login message (should be tagged either with
   //       TAG_SLOGIN or TAG_RLOGIN), send response
-  // std::cout << "Location 1" << std::endl;
-  Connection conn((info->clientfd));
-  // std::cout << "client fd:" << info->clientfd << std::endl;
+  Connection* conn = new Connection((info->clientfd));
   char message[550] = "FAILED:To Send";
-  // std::cout << "Location 2" << std::endl;
-  bool receive_result = conn.receive(message);
-  if (receive_result == false) {
+  bool receive_result = conn->receive(message);
+  if (receive_result == false) { //handle error for send
     std::cerr << "Error receiving message from client" << std::endl;
-    // close(info->clientfd);
-    conn.close();
+    conn->close();
     delete info;
     return NULL;
   }
-
+  //strip and format message
   std::string formatted_message(message);
   std::string delimiter = ":";
   std::string tag = formatted_message.substr(0, formatted_message.find(delimiter)); 
@@ -77,32 +74,37 @@ void *worker(void *arg) {
   //       separate helper functions for each of these possibilities
   //       is a good idea)
   if(tag == "rlogin") { //parse login message tag for recv
-    if (!conn.send("ok:hello")) {//message ok because we got a good login
+    if (!conn->send("ok:hello")) {//message ok because we got a good login
       std::cerr << "Error sending message to client recv" << std::endl;
-      conn.close();
+      conn->close();
       delete info;
       return NULL;
     }
     User *user = new User(username,false); //init user as recv
-    info->server->chat_with_receiver(user,info->clientfd,&conn); //move into recv loop
+    info->server->chat_with_receiver(user,info->clientfd,conn); //move into recv loop
+    delete user;
   } else if(tag == "slogin") { //parse login message tag for sender
-    if (!conn.send("ok:hello")) {//message ok because we got a good login
+    if (!conn->send("ok:hello")) {//message ok because we got a good login
       std::cerr << "Error sending message to client sender" << std::endl;
-      conn.close();
+      conn->close();
+      delete conn;
       delete info;
       return NULL;
     }
     User *user = new User(username,true); //init user as sender
-    info->server->chat_with_sender(user,info->clientfd,&conn); //move into sender loop
+    info->server->chat_with_sender(user,info->clientfd,conn); //move into sender loop
+    delete user;
   } else {
     //error with bad tag case
-    conn.send("err:bad_login");//message ok because we got a good login
+    conn->send("err:bad_login");//message ok because we got a good login
     std::cerr << "BAD FIRST TAG: " << tag << std::endl;
-    conn.close();
+    conn->close();
+    delete conn;
     delete info;
     return NULL;
   }
-  conn.close();
+  conn->close();
+  delete conn;
   delete info;
   return NULL;
 }
@@ -113,6 +115,9 @@ void *worker(void *arg) {
 // Server member function implementation
 ////////////////////////////////////////////////////////////////////////
 
+/*
+Server constructor by port
+*/
 Server::Server(int port)
   : m_port(port)
   , m_ssock(-1) {
@@ -120,13 +125,19 @@ Server::Server(int port)
   pthread_mutex_init(&m_lock, NULL); //pthread_mutex_t *, const pthread_mutexattr_t *_Nullable
 }
 
+
+/*
+Server destructor needs to kill mutex and the socket connection.
+*/
 Server::~Server() {
   // destroy mutex
   pthread_mutex_destroy(&m_lock);
   close(m_ssock);
 }
 
-
+/*
+Listen function inits and open listen fd to for the server.
+*/
 bool Server::listen() {
   //  use open_listenfd to create the server socket, return true
   //       if successful, false if not
@@ -139,6 +150,10 @@ bool Server::listen() {
   return true;
 }
 
+
+/*
+Function to manage all client requests, calls accept in a loop. Creates new threads.
+*/
 void Server::handle_client_requests() {
   //      infinite loop calling accept or Accept, starting a new
   //       pthread for each connected client
@@ -167,6 +182,10 @@ void Server::handle_client_requests() {
   // and register it to a room when client sends join request
 }
 
+
+/*
+helper function to either find a room object or create a new one if need be.
+*/
 Room *Server::find_or_create_room(const std::string &room_name) {
   //      return a pointer to the unique Room object representing
   //       the named chat room, creating a new one if necessary
