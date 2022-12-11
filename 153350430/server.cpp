@@ -173,7 +173,6 @@ Room *Server::find_or_create_room(const std::string &room_name) {
   if (m_rooms.count(room_name)>0) { //checks to see if a room exits in the map
     return m_rooms[room_name]; //if it does we return the room
   } else { //if it doesnt
-    
     Room* new_room = new Room(room_name);
     Guard g(m_lock);
     m_rooms[room_name] = new_room; //create a new room by constructor w/ roomname
@@ -263,6 +262,7 @@ void Server::chat_with_sender(User *user, int client_fd, Connection* conn) {
       return true;
     }
   }
+
 
   bool Server::leave(User *user, Room *cur_room) {
     if ((cur_room == nullptr) || (m_rooms.count(cur_room->get_room_name()) <= 0)) { //checks to see if a room exits in the map
