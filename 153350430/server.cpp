@@ -83,8 +83,8 @@ void *worker(void *arg) {
       delete info;
       return NULL;
     }
-    User user(username,false); //init user as recv
-    info->server->chat_with_receiver(&user,info->clientfd,&conn); //move into recv loop
+    User *user = new User(username,false); //init user as recv
+    info->server->chat_with_receiver(user,info->clientfd,&conn); //move into recv loop
   } else if(tag == "slogin") { //parse login message tag for sender
     if (!conn.send("ok:hello")) {//message ok because we got a good login
       std::cerr << "Error sending message to client sender" << std::endl;
@@ -92,8 +92,8 @@ void *worker(void *arg) {
       delete info;
       return NULL;
     }
-    User user(username,true); //init user as sender
-    info->server->chat_with_sender(&user,info->clientfd,&conn); //move into sender loop
+    User *user = new User(username,true); //init user as sender
+    info->server->chat_with_sender(user,info->clientfd,&conn); //move into sender loop
   } else {
     //error with bad tag case
     conn.send("err:bad_login");//message ok because we got a good login
@@ -275,7 +275,7 @@ void Server::chat_with_sender(User *user, int client_fd, Connection* conn) {
 
   bool Server::quit(User *user, Room *cur_room) { //add any other needed close down code to this
     leave(user,cur_room);
-    //delete user;
+    delete user;
     return true;
   }
 
